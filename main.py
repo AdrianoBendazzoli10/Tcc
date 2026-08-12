@@ -1,7 +1,56 @@
 from analyzers.ocr_analyzer import OCRAnalyzer
+from analyzers.document_comparator import DocumentComparator
 
-arquivo = "receita oculista 3 prescricoes.jpeg"
 
-analyzer = OCRAnalyzer()
-resultado = analyzer.analyze(arquivo)
-print(resultado)
+ocr = OCRAnalyzer()
+
+documento1 = ocr.analyze("oculista.jpeg")
+documento2 = ocr.analyze("obito.jpg")
+
+
+print("DOCUMENTO 1")
+print("Sucesso:", documento1.success)
+
+if documento1.success:
+    print("Nome:", documento1.data["fields"]["nome"])
+    print("CPF:", documento1.data["fields"]["cpf"])
+else:
+    print("Erro:", documento1.warnings)
+
+
+print("\nDOCUMENTO 2")
+print("Sucesso:", documento2.success)
+
+if documento2.success:
+    print("Nome:", documento2.data["fields"]["nome"])
+    print("CPF:", documento2.data["fields"]["cpf"])
+else:
+    print("Erro:", documento2.warnings)
+
+
+if documento1.success and documento2.success:
+
+    comparador = DocumentComparator()
+
+    resultado = comparador.compare(documento1, documento2)
+
+    print("\n==============================")
+    print("COMPARAÇÃO")
+    print("==============================")
+
+    print(
+        "Nome:",
+        "COMPATÍVEL" if resultado["campos"]["nome"] else "DIVERGENTE"
+    )
+
+    print(
+        "CPF:",
+        "COMPATÍVEL" if resultado["campos"]["cpf"] else "DIVERGENTE"
+    )
+
+    print(
+        "Data:",
+        "COMPATÍVEL" if resultado["campos"]["data"] else "DIVERGENTE"
+    )
+
+    print("\nResultado:", resultado["status"])
