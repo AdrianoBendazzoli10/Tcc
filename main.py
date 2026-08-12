@@ -1,10 +1,7 @@
-from analyzers.metadata_analyzer import MetadataAnalyzer
-
+from analyzers.ocr_analyzer import OCRAnalyzer
 
 arquivo = "receita oculista 3 prescricoes.jpeg"
 
-analyzer = MetadataAnalyzer()
-
+analyzer = OCRAnalyzer()
 resultado = analyzer.analyze(arquivo)
-
 print(resultado)
