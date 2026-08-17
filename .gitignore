@@ -1,0 +1,21 @@
+# Ambiente virtual
+venv/
+.venv/
+
+# Documentos e imagens de teste
+*.jpg
+*.jpeg
+*.png
+*.pdf
+
+# Cache do Python
+__pycache__/
+*.pyc
+
+# Arquivos temporários
+*.tmp
+*.temp
+
+# IDE
+.vscode/
+.idea/
