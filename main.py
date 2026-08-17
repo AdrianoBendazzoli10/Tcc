@@ -32,7 +32,10 @@ if documento1.success and documento2.success:
 
     comparador = DocumentComparator()
 
-    resultado = comparador.compare(documento1, documento2)
+    resultado = comparador.compare(
+        documento1,
+        documento2
+    )
 
     print("\n==============================")
     print("COMPARAÇÃO")
@@ -40,17 +43,25 @@ if documento1.success and documento2.success:
 
     print(
         "Nome:",
-        "COMPATÍVEL" if resultado["campos"]["nome"] else "DIVERGENTE"
+        resultado["campos"]["nome"]
     )
 
     print(
         "CPF:",
-        "COMPATÍVEL" if resultado["campos"]["cpf"] else "DIVERGENTE"
+        resultado["campos"]["cpf"]
     )
 
     print(
         "Data:",
-        "COMPATÍVEL" if resultado["campos"]["data"] else "DIVERGENTE"
+        resultado["campos"]["data"]
     )
 
-    print("\nResultado:", resultado["status"])
+    print(
+        "\nCompatibilidade:",
+        resultado["compatibilidade"]
+    )
+
+    print(
+        "Resultado:",
+        resultado["status"]
+    )
