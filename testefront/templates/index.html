@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+
+<html lang="pt-BR">
+
+<head>
+
+    <meta charset="UTF-8">
+
+    <title>Verificador de Documentos</title>
+
+    <link
+        rel="stylesheet"
+        href="{{ url_for('static', filename='style.css') }}"
+    >
+
+</head>
+
+<body>
+
+<div class="container">
+
+    <h1>Verificador de Documentos</h1>
+
+    <p class="descricao">
+        Sistema de análise e comparação de documentos
+    </p>
+
+
+    <form
+        method="POST"
+        enctype="multipart/form-data"
+        class="formulario"
+    >
+
+        <div class="campo">
+
+            <label>Documento 1</label>
+
+            <input
+                type="file"
+                name="documento1"
+                accept=".jpg,.jpeg,.png,.pdf"
+                required
+            >
+
+        </div>
+
+
+        <div class="campo">
+
+            <label>Documento 2</label>
+
+            <input
+                type="file"
+                name="documento2"
+                accept=".jpg,.jpeg,.png,.pdf"
+                required
+            >
+
+        </div>
+
+
+        <button type="submit">
+            Analisar documentos
+        </button>
+
+    </form>
+
+
+    {% if erro %}
+
+        <div class="erro">
+            {{ erro }}
+        </div>
+
+    {% endif %}
+
+
+    {% if resultado %}
+
+        <h2>Documentos analisados</h2>
+
+        <div class="documentos">
+
+
+            <!-- DOCUMENTO 1 -->
+
+            <div class="card">
+
+                <h3>Documento 1</h3>
+
+                <p>
+                    <strong>Tipo:</strong>
+                    {{ resultado.documento1.type }}
+                </p>
+
+                <p>
+                    <strong>Nome:</strong>
+
+                    {{ resultado.documento1.fields.nome
+                       or "Não identificado" }}
+                </p>
+
+                <p>
+                    <strong>CPF:</strong>
+
+                    {{ resultado.documento1.fields.cpf
+                       or "Não identificado" }}
+                </p>
+
+                <p>
+                    <strong>Datas:</strong>
+
+                    {% if resultado.documento1.fields.datas %}
+
+                        {{ resultado.documento1.fields.datas | join(", ") }}
+
+                    {% else %}
+
+                        Não identificadas
+
+                    {% endif %}
+
+                </p>
+
+                <p>
+                    <strong>Confiança OCR:</strong>
+                    {{ resultado.documento1.confidence }}%
+                </p>
+
+            </div>
+
+
+            <!-- DOCUMENTO 2 -->
+
+            <div class="card">
+
+                <h3>Documento 2</h3>
+
+                <p>
+                    <strong>Tipo:</strong>
+                    {{ resultado.documento2.type }}
+                </p>
+
+                <p>
+                    <strong>Nome:</strong>
+
+                    {{ resultado.documento2.fields.nome
+                       or "Não identificado" }}
+                </p>
+
+                <p>
+                    <strong>CPF:</strong>
+
+                    {{ resultado.documento2.fields.cpf
+                       or "Não identificado" }}
+                </p>
+
+                <p>
+                    <strong>Datas:</strong>
+
+                    {% if resultado.documento2.fields.datas %}
+
+                        {{ resultado.documento2.fields.datas | join(", ") }}
+
+                    {% else %}
+
+                        Não identificadas
+
+                    {% endif %}
+
+                </p>
+
+                <p>
+                    <strong>Confiança OCR:</strong>
+                    {{ resultado.documento2.confidence }}%
+                </p>
+
+            </div>
+
+        </div>
+
+
+        <!-- COMPARAÇÃO -->
+
+        <h2>Resultado da comparação</h2>
+
+        <div class="comparacao">
+
+            <div class="resultado-linha">
+
+                <strong>Nome</strong>
+
+                <span>
+                    {{ resultado.comparacao.campos.nome }}
+                </span>
+
+            </div>
+
+
+            <div class="resultado-linha">
+
+                <strong>CPF</strong>
+
+                <span>
+                    {{ resultado.comparacao.campos.cpf }}
+                </span>
+
+            </div>
+
+
+            <div class="resultado-linha">
+
+                <strong>Data</strong>
+
+                <span>
+                    {{ resultado.comparacao.campos.data }}
+                </span>
+
+            </div>
+
+
+            <hr>
+
+
+            <div class="resultado-final">
+
+                <p>
+
+                    <strong>Compatibilidade:</strong>
+
+                    {% if resultado.comparacao.compatibilidade is not none %}
+
+                        {{ resultado.comparacao.compatibilidade }}%
+
+                    {% else %}
+
+                        Sem dados suficientes
+
+                    {% endif %}
+
+                </p>
+
+
+                <p>
+
+                    <strong>Resultado:</strong>
+
+                    {{ resultado.comparacao.status }}
+
+                </p>
+
+            </div>
+
+        </div>
+
+    {% endif %}
+
+</div>
+
+</body>
+
+</html>

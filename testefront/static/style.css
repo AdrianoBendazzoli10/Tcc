@@ -1,0 +1,109 @@
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f3f3f3;
+    color: #222;
+}
+
+.container {
+    width: 90%;
+    max-width: 1000px;
+    margin: 40px auto;
+}
+
+h1 {
+    margin-bottom: 5px;
+}
+
+.descricao {
+    color: #666;
+    margin-top: 0;
+}
+
+.formulario {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-top: 25px;
+    margin-bottom: 30px;
+}
+
+.campo {
+    margin-bottom: 20px;
+}
+
+.campo label {
+    display: block;
+    font-weight: bold;
+    margin-bottom: 8px;
+}
+
+button {
+    padding: 10px 18px;
+    background: #222;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+button:hover {
+    background: #444;
+}
+
+.documentos {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.card,
+.comparacao {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    margin-bottom: 25px;
+}
+
+.card h3 {
+    margin-top: 0;
+}
+
+.comparacao {
+    margin-top: 10px;
+}
+
+.resultado-linha {
+    display: flex;
+    justify-content: space-between;
+    padding: 15px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.resultado-final {
+    font-size: 18px;
+}
+
+.erro {
+    background: #ffdede;
+    padding: 15px;
+    border-radius: 6px;
+    margin-bottom: 20px;
+}
+
+hr {
+    border: 0;
+    border-top: 1px solid #ddd;
+}
+
+@media (max-width: 700px) {
+
+    .documentos {
+        grid-template-columns: 1fr;
+    }
+
+}
