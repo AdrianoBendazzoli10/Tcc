@@ -1,67 +1,78 @@
 from analyzers.ocr_analyzer import OCRAnalyzer
-from analyzers.document_comparator import DocumentComparator
+from analyzers.metadata_analyzer import MetadataAnalyzer
 
 
-ocr = OCRAnalyzer()
+def analisar_documento(caminho_arquivo):
+    """
+    Executa os analisadores disponíveis no documento.
+    """
 
-documento1 = ocr.analyze("oculista.jpeg")
-documento2 = ocr.analyze("obito.jpg")
+    resultados = {}
+
+    # Análise de OCR
+    try:
+        ocr_analyzer = OCRAnalyzer()
+        resultados["ocr"] = ocr_analyzer.analyze(caminho_arquivo)
+    except Exception as erro:
+        resultados["ocr"] = {
+            "sucesso": False,
+            "erro": str(erro)
+        }
+
+    # Análise de metadados
+    try:
+        metadata_analyzer = MetadataAnalyzer()
+        resultados["metadata"] = metadata_analyzer.analyze(caminho_arquivo)
+    except Exception as erro:
+        resultados["metadata"] = {
+            "sucesso": False,
+            "erro": str(erro)
+        }
+
+    return resultados
 
 
-print("DOCUMENTO 1")
-print("Sucesso:", documento1.success)
+def exibir_resultados(resultados):
+    """
+    Exibe os resultados das análises no terminal.
+    """
 
-if documento1.success:
-    print("Nome:", documento1.data["fields"]["nome"])
-    print("CPF:", documento1.data["fields"]["cpf"])
-else:
-    print("Erro:", documento1.warnings)
+    print("\n" + "=" * 50)
+    print("        ANÁLISE DO DOCUMENTO")
+    print("=" * 50)
+
+    for nome_analisador, resultado in resultados.items():
+
+        print(f"\n[{nome_analisador.upper()}]")
+
+        if resultado is None:
+            print("Nenhum resultado encontrado.")
+            continue
+
+        print(resultado)
+
+    print("\n" + "=" * 50)
 
 
-print("\nDOCUMENTO 2")
-print("Sucesso:", documento2.success)
+def main():
+    """
+    Função principal do sistema.
+    """
 
-if documento2.success:
-    print("Nome:", documento2.data["fields"]["nome"])
-    print("CPF:", documento2.data["fields"]["cpf"])
-else:
-    print("Erro:", documento2.warnings)
+    caminho_arquivo = input(
+        "Digite o caminho do documento: "
+    ).strip()
+
+    if not caminho_arquivo:
+        print("Nenhum arquivo informado.")
+        return
+
+    print("\nIniciando análise...")
+
+    resultados = analisar_documento(caminho_arquivo)
+
+    exibir_resultados(resultados)
 
 
-if documento1.success and documento2.success:
-
-    comparador = DocumentComparator()
-
-    resultado = comparador.compare(
-        documento1,
-        documento2
-    )
-
-    print("\n==============================")
-    print("COMPARAÇÃO")
-    print("==============================")
-
-    print(
-        "Nome:",
-        resultado["campos"]["nome"]
-    )
-
-    print(
-        "CPF:",
-        resultado["campos"]["cpf"]
-    )
-
-    print(
-        "Data:",
-        resultado["campos"]["data"]
-    )
-
-    print(
-        "\nCompatibilidade:",
-        resultado["compatibilidade"]
-    )
-
-    print(
-        "Resultado:",
-        resultado["status"]
-    )
+if _name_ == "_main_":
+    main()
