@@ -37,4 +37,5 @@ já na quarta parte foi usado a biblioteca pymupdf, que transforma um pdf em ima
 
 05/08 - foi iniciado a etruturação da parte de ocr, usada para ler o conteúdo do documento, o usuário coloca dois sou mais documentos de alguma pessoa para verificar se o nome, cpf e data são compatíveis uns com os outros.
 
+
 Link Tesseract - https://github.com/UB-Mannheim/tesseract/wiki?
