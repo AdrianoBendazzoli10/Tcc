@@ -100,6 +100,40 @@ hr {
     border-top: 1px solid #ddd;
 }
 
+.evidencias {
+    margin-top: 15px;
+    padding-top: 15px;
+    border-top: 1px solid #ddd;
+}
+
+.evidencias ul {
+    margin: 8px 0 0;
+    padding-left: 0;
+    list-style: none;
+}
+
+.evidencias li {
+    padding: 8px 10px;
+    border-radius: 5px;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.evidencia-high {
+    background: #ffdede;
+    border-left: 4px solid #c0392b;
+}
+
+.evidencia-medium {
+    background: #fff3d6;
+    border-left: 4px solid #d68910;
+}
+
+.evidencia-low {
+    background: #eef2f5;
+    border-left: 4px solid #7f8c8d;
+}
+
 @media (max-width: 700px) {
 
     .documentos {

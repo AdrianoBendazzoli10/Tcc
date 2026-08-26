@@ -84,6 +84,8 @@ def index():
                     resultado = {
                         "documento1": documento1.data,
                         "documento2": documento2.data,
+                        "evidencias1": documento1.evidences,
+                        "evidencias2": documento2.evidences,
                         "comparacao": comparacao
                     }
 

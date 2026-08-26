@@ -104,8 +104,27 @@
                 <p>
                     <strong>CPF:</strong>
 
-                    {{ resultado.documento1.fields.cpf
-                       or "Não identificado" }}
+                    {% if resultado.documento1.fields.cpf_status == "ambiguous" %}
+
+                        Ambíguo — candidatos:
+                        {{ resultado.documento1.fields.cpf_candidates | join(", ") }}
+
+                    {% elif resultado.documento1.fields.cpf_status == "invalid" %}
+
+                        {{ resultado.documento1.fields.cpf }}
+                        (dígito verificador inválido)
+
+                    {% elif resultado.documento1.fields.cpf_status == "corrected" %}
+
+                        {{ resultado.documento1.fields.cpf }}
+                        (corrigido automaticamente)
+
+                    {% else %}
+
+                        {{ resultado.documento1.fields.cpf
+                           or "Não identificado" }}
+
+                    {% endif %}
                 </p>
 
                 <p>
@@ -127,6 +146,26 @@
                     <strong>Confiança OCR:</strong>
                     {{ resultado.documento1.confidence }}%
                 </p>
+
+                {% if resultado.evidencias1 %}
+
+                    <div class="evidencias">
+
+                        <strong>Alertas:</strong>
+
+                        <ul>
+                            {% for evidencia in resultado.evidencias1 %}
+
+                                <li class="evidencia-{{ evidencia.severity }}">
+                                    {{ evidencia.message }}
+                                </li>
+
+                            {% endfor %}
+                        </ul>
+
+                    </div>
+
+                {% endif %}
 
             </div>
 
@@ -152,8 +191,27 @@
                 <p>
                     <strong>CPF:</strong>
 
-                    {{ resultado.documento2.fields.cpf
-                       or "Não identificado" }}
+                    {% if resultado.documento2.fields.cpf_status == "ambiguous" %}
+
+                        Ambíguo — candidatos:
+                        {{ resultado.documento2.fields.cpf_candidates | join(", ") }}
+
+                    {% elif resultado.documento2.fields.cpf_status == "invalid" %}
+
+                        {{ resultado.documento2.fields.cpf }}
+                        (dígito verificador inválido)
+
+                    {% elif resultado.documento2.fields.cpf_status == "corrected" %}
+
+                        {{ resultado.documento2.fields.cpf }}
+                        (corrigido automaticamente)
+
+                    {% else %}
+
+                        {{ resultado.documento2.fields.cpf
+                           or "Não identificado" }}
+
+                    {% endif %}
                 </p>
 
                 <p>
@@ -175,6 +233,26 @@
                     <strong>Confiança OCR:</strong>
                     {{ resultado.documento2.confidence }}%
                 </p>
+
+                {% if resultado.evidencias2 %}
+
+                    <div class="evidencias">
+
+                        <strong>Alertas:</strong>
+
+                        <ul>
+                            {% for evidencia in resultado.evidencias2 %}
+
+                                <li class="evidencia-{{ evidencia.severity }}">
+                                    {{ evidencia.message }}
+                                </li>
+
+                            {% endfor %}
+                        </ul>
+
+                    </div>
+
+                {% endif %}
 
             </div>
 
