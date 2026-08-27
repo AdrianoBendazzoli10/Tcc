@@ -62,12 +62,22 @@ def normalize_ocr_chars(raw: str) -> str:
 # 2. Extração do trecho candidato a CPF no texto OCR
 # ---------------------------------------------------------------------------
 
-# Captura algo como "CPF 470.764.086-9" ou "CPF: 4707640869" tolerando ruído
-# de OCR entre o rótulo e o valor (dois pontos, espaços, hífen sujo etc).
+# Captura algo como "CPF 470.764.086-9", "CPF: 4707640869" ou o formato
+# bilíngue de RGs mais novos, onde o rótulo e o valor ficam separados por
+# outros campos/quebras de linha:
+#   "Registro Geral - CPF / Personal Number     Sexo/Sex
+#    F
+#
+#    088.794.450-7"
+# A tolerância de distância é generosa (até 80 caracteres, incluindo
+# quebras de linha) porque documentos reais variam bastante em como
+# organizam rótulo e valor — o valor em si ainda precisa ter cara de CPF
+# (dígitos/pontuação), então um "achado" errado tende a ser descartado
+# depois pela validação de checksum, não silenciosamente aceito.
 _CPF_LABEL_RE = re.compile(
-    r"C\s*P\s*F[^0-9OIloqQgGbBsSzZtT]{0,5}"
+    r"C\s*P\s*F.{0,80}?"
     r"([0-9OIloqQgGbBsSzZtT][0-9OIloqQgGbBsSzZtT.\-\s]{7,17}[0-9OIloqQgGbBsSzZtT])",
-    re.IGNORECASE,
+    re.IGNORECASE | re.DOTALL,
 )
 
 

@@ -8,7 +8,7 @@ import platform
 import fitz  # PyMuPDF
 import pytesseract
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 
 def _configurar_tesseract():
@@ -54,6 +54,7 @@ _configurar_tesseract()
 from core.analysis_result import AnalysisResult
 from core.evidence import Evidence
 from core.cpf_validator import find_cpf
+from analyzers.cpf_from_image import extract_cpf_from_region
 
 
 class OCRAnalyzer:
@@ -63,15 +64,86 @@ class OCRAnalyzer:
     # dígito verificador e correção de erros de OCR ficam a cargo de
     # core.cpf_validator.find_cpf(), que é bem mais robusto.
     DATE_PATTERN = re.compile(r"\d{2}/\d{2}/\d{4}")
-    # "Nome:" seguido de palavras em maiúsculas ou capitalizadas, na mesma linha.
-    # Usa espaço literal (não \s) para não atravessar quebras de linha, e limita
-    # explicitamente a maiúsculas (mesmo com IGNORECASE) para não misturar "Nome Social" etc.
+    # "Nome:" seguido do valor, aceitando tanto TUDO EM MAIÚSCULAS (comum em
+    # certidões/documentos oficiais brasileiros, ex: "RICARDO CAVALCANTE")
+    # quanto Title Case (comum em RGs de modelo mais novo, ex: "Ana Souza").
+    # Cada palavra precisa começar com maiúscula; o resto pode ser
+    # maiúsculo ou minúsculo. Tolerância de distância generosa (até 40
+    # caracteres) cobre rótulos bilíngues tipo "Nome / Name" com o valor
+    # na linha seguinte. O lookahead negativo evita casar com "Nome
+    # Social", que costuma vir logo depois e ficar vazio na maioria dos
+    # documentos.
     NAME_PATTERN = re.compile(
-        r"(?i:nome)[:\s]+([A-ZÀ-Ú]+(?: [A-ZÀ-Ú]+)+)",
+        r"(?i:nome)(?!\s*social).{0,40}?"
+        r"([A-ZÀ-Ú][A-Za-zà-ú]*"
+        r"(?:[ \t]+(?!(?i:nome\s+social))[A-ZÀ-Ú][A-Za-zà-ú]*)+)",
+        re.DOTALL,
     )
+
+    # Palavras comuns em cabeçalhos institucionais, usadas para DESCARTAR
+    # linhas que claramente não são nome de pessoa, no fallback heurístico
+    # abaixo (usado quando não existe rótulo "Nome:" explícito no
+    # documento — comum em carteirinhas/crachás/cartões diversos).
+    _PALAVRAS_NAO_NOME = {
+        "GOVERNO", "ESTADO", "FEDERAL", "FEDERATIVA", "REPUBLICA", "REPÚBLICA",
+        "BRASIL", "SECRETARIA", "SEGURANCA", "SEGURANÇA", "DISTRITO",
+        "CARTEIRA", "IDENTIDADE", "REGISTRO", "GERAL", "PERSONAL", "NUMBER",
+        "CENTRO", "PAULA", "SOUZA", "ENSINO", "MEDIO", "MÉDIO", "INFO", "NET",
+        "MANHA", "MANHÃ", "ETEC", "PROFA", "PROFESSORA", "SAO", "SÃO", "PAULO",
+        "RIBEIRAO", "RIBEIRÃO", "PIRES", "ESCOLAR", "GRATUITO", "STUD",
+        "CARTAO", "CARTÃO", "ATENDIMENTO", "CENTRAL", "GOVERNO", "TIPO",
+    }
 
     # Abaixo desse valor (0-100), consideramos o texto pouco confiável
     MIN_CONFIDENCE = 60
+
+
+    def _linha_parece_nome(self, linha):
+        """
+        Heurística simples: uma linha 'parece nome de pessoa' se tem entre
+        2 e 6 palavras, todas compostas só de letras, e a MAIORIA delas não
+        é uma palavra institucional conhecida (ver _PALAVRAS_NAO_NOME).
+        Não é infalível — é só um fallback para quando não há rótulo
+        explícito no documento.
+        """
+        limpo = linha.strip().rstrip(".").strip()
+        palavras = limpo.split()
+
+        if not (2 <= len(palavras) <= 6):
+            return False
+
+        if not all(re.fullmatch(r"[A-ZÀ-Ú][A-Za-zà-ú]*", p) for p in palavras):
+            return False
+
+        palavras_maiusculas = {p.upper() for p in palavras}
+        intersecao = palavras_maiusculas & self._PALAVRAS_NAO_NOME
+
+        # se metade ou mais das palavras da linha são termos institucionais
+        # conhecidos, não tratamos como nome
+        if len(intersecao) >= len(palavras) / 2:
+            return False
+
+        return True
+
+
+    def _extract_name_heuristic(self, text):
+        """
+        Fallback para documentos sem rótulo 'Nome:' explícito (ex: cards
+        que listam o nome direto, sem label). Varre as linhas do texto
+        procurando a que mais parece um nome de pessoa, priorizando a
+        linha com mais palavras (nomes completos tendem a ter mais).
+        """
+        candidatos = [
+            linha.strip().rstrip(".")
+            for linha in text.splitlines()
+            if self._linha_parece_nome(linha)
+        ]
+
+        if not candidatos:
+            return None
+
+        candidatos.sort(key=lambda linha: len(linha.split()), reverse=True)
+        return candidatos[0]
 
 
     def analyze(self, file_path):
@@ -147,19 +219,23 @@ class OCRAnalyzer:
 
         full_text = ""
         confidences = []
+        primeira_pagina_imagem = None
 
-        for page in pdf:
+        for indice, page in enumerate(pdf):
 
             # renderiza a página em resolução maior para melhorar a leitura do OCR
             pix = page.get_pixmap(matrix=fitz.Matrix(2, 2))
             image = Image.open(io.BytesIO(pix.tobytes("png")))
+
+            if indice == 0:
+                primeira_pagina_imagem = image
 
             text, page_confidences = self._ocr_image(image)
 
             full_text += text + "\n"
             confidences.extend(page_confidences)
 
-        fields = self._extract_fields(full_text)
+        fields = self._extract_fields(full_text, image=primeira_pagina_imagem)
         avg_confidence = self._average_confidence(confidences)
 
         evidences = self._build_evidences(full_text, fields, avg_confidence)
@@ -179,11 +255,17 @@ class OCRAnalyzer:
 
     def _analyze_image(self, file_path):
 
-        image = Image.open(file_path)
+        # Fotos tiradas com celular frequentemente têm uma tag EXIF de
+        # orientação (rotação) que os visualizadores de imagem aplicam
+        # automaticamente na hora de exibir, mas o PIL NÃO aplica sozinho
+        # ao abrir o arquivo. Sem essa correção, o Tesseract lê os pixels
+        # crus (a imagem "deitada"), o que produz texto completamente
+        # embaralhado, mesmo a foto aparecendo em pé em qualquer visualizador.
+        image = ImageOps.exif_transpose(Image.open(file_path))
 
         text, confidences = self._ocr_image(image)
 
-        fields = self._extract_fields(text)
+        fields = self._extract_fields(text, image=image)
         avg_confidence = self._average_confidence(confidences)
 
         evidences = self._build_evidences(text, fields, avg_confidence)
@@ -228,11 +310,45 @@ class OCRAnalyzer:
 
     # ---------- EXTRAÇÃO DE CAMPOS ----------
 
-    def _extract_fields(self, text):
+    def _extract_fields(self, text, image=None):
 
         cpf_result = find_cpf(text)
+        resolvido_via_regiao = False
+
+        # Se a leitura no texto de página inteira ficou ambígua ou não
+        # encontrou nada, tentamos uma segunda passada: isolar só a região
+        # do campo CPF na imagem e reprocessar com whitelist de dígitos.
+        # Isso resolve erros de OCR na origem (confirmado com documentos
+        # reais: um CPF que dava "ambíguo" no texto corrido saiu correto
+        # isolando a região), em vez de depender só de correção estatística
+        # sobre um texto que já saiu degradado.
+        #
+        # Não fazemos essa segunda tentativa quando o status já é "invalid":
+        # nesse caso o texto de página inteira já leu 11 dígitos bem
+        # formatados, então não é uma ambiguidade de OCR — é um CPF
+        # provavelmente inconsistente no próprio documento. Substituir esse
+        # resultado por uma segunda leitura poderia mascarar um indício
+        # real de adulteração.
+        if image is not None and cpf_result.status in ("ambiguous", "not_found"):
+
+            try:
+                cpf_result_regiao = extract_cpf_from_region(image)
+            except Exception:
+                cpf_result_regiao = None
+
+            if cpf_result_regiao is not None and cpf_result_regiao.status in ("valid", "corrected"):
+                cpf_result = cpf_result_regiao
+                resolvido_via_regiao = True
+
         date_matches = self.DATE_PATTERN.findall(text)
         name_match = self.NAME_PATTERN.search(text)
+
+        if name_match:
+            nome_valor = name_match.group(1).strip()
+            nome_fonte = "rotulo"
+        else:
+            nome_valor = self._extract_name_heuristic(text)
+            nome_fonte = "heuristica" if nome_valor else None
 
         # "cpf" continua sendo o campo simples (string de dígitos ou None),
         # para não quebrar quem já consome fields["cpf"] (ex: DocumentComparator).
@@ -247,11 +363,13 @@ class OCRAnalyzer:
 
         return {
 
-            "nome": name_match.group(1).strip() if name_match else None,
+            "nome": nome_valor,
+            "nome_fonte": nome_fonte,
             "cpf": cpf_valor,
             "cpf_status": cpf_result.status,
             "cpf_candidates": cpf_result.candidates,
             "cpf_raw_ocr": cpf_result.raw_ocr_text,
+            "cpf_resolved_via_region": resolvido_via_regiao,
             "datas": date_matches
 
         }
@@ -309,8 +427,42 @@ class OCRAnalyzer:
 
             )
 
+        elif fields.get("nome_fonte") == "heuristica":
+
+            # O nome não veio de um rótulo explícito ("Nome:") — foi
+            # inferido por heurística (linha que "parece nome"). Mais
+            # sujeito a falso positivo/negativo que a extração por rótulo,
+            # então vale sinalizar para quem for revisar o resultado.
+            evidences.append(
+
+                Evidence(
+                    code="OCR_NAME_HEURISTIC",
+                    message=f"Nome identificado por heurística, sem rótulo "
+                            f"'Nome:' explícito no documento ({fields['nome']!r}). "
+                            f"Recomenda-se revisão manual.",
+                    severity="low",
+                    weight=5
+                )
+
+            )
+
 
         cpf_status = fields.get("cpf_status")
+
+        if fields.get("cpf_resolved_via_region") and cpf_status in ("valid", "corrected"):
+
+            evidences.append(
+
+                Evidence(
+                    code="OCR_CPF_RESOLVED_VIA_REGION",
+                    message="A leitura do CPF no texto de página inteira ficou "
+                            "ambígua ou não foi encontrada; resolvida isolando "
+                            "a região do campo e reprocessando com maior precisão.",
+                    severity="low",
+                    weight=0
+                )
+
+            )
 
         if cpf_status == "not_found":
 
