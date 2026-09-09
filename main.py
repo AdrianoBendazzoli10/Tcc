@@ -19,7 +19,10 @@ STATUS_CPF = {
 
 STATUS_COMPARACAO = {
     "COMPATIVEL": "Compatível",
+    "PARCIALMENTE_COMPATIVEL": "Parcialmente compatível",
     "DIVERGENTE": "Divergente",
+    "INVALIDO": "Inválido — requer revisão",
+    "AMBIGUO": "Ambíguo — requer revisão",
     "NAO_IDENTIFICADO": "Não foi possível comparar",
 }
 
@@ -170,6 +173,8 @@ def exibir_comparacao(comparacao):
         print("  Conclusão: os dados comparáveis são compatíveis.")
     elif comparacao["status"] == "INCONSISTENTE":
         print("  Conclusão: existem divergências que exigem revisão humana.")
+    elif comparacao["status"] == "REQUER_REVISAO":
+        print("  Conclusão: os dados coincidem parcialmente, mas há campos inválidos ou ambíguos.")
     else:
         print("  Conclusão: não há dados suficientes para uma conclusão.")
 
