@@ -1,5 +1,6 @@
 from analyzers.ocr_analyzer import OCRAnalyzer
 from analyzers.metadata_analyzer import MetadataAnalyzer
+from analyzers.document_comparator import DocumentComparator
 
 
 SEVERIDADES = {
@@ -14,6 +15,12 @@ STATUS_CPF = {
     "ambiguous": "Leitura ambígua",
     "invalid": "Inválido",
     "not_found": "Não encontrado",
+}
+
+STATUS_COMPARACAO = {
+    "COMPATIVEL": "Compatível",
+    "DIVERGENTE": "Divergente",
+    "NAO_IDENTIFICADO": "Não foi possível comparar",
 }
 
 
@@ -93,13 +100,13 @@ def analisar_documento(caminho_arquivo):
     return resultados
 
 
-def exibir_resultados(resultados):
+def exibir_resultados(resultados, titulo="RESULTADO DA ANÁLISE"):
     """
     Exibe os resultados das análises no terminal.
     """
 
     print("\n" + "=" * 64)
-    print("                    RESULTADO DA ANÁLISE")
+    print(f"{titulo:^64}")
     print("=" * 64)
 
     for nome_analisador, resultado in resultados.items():
@@ -126,24 +133,72 @@ def exibir_resultados(resultados):
     print("\n" + "=" * 64)
 
 
+def exibir_comparacao(comparacao):
+    """Exibe a conclusão da comparação entre os dois documentos."""
+    status = comparacao["status"].replace("_", " ").title()
+    compatibilidade = comparacao.get("compatibilidade")
+
+    print("\n" + "=" * 64)
+    print(f"{'COMPARAÇÃO ENTRE OS DOCUMENTOS':^64}")
+    print("=" * 64)
+
+    for campo, resultado in comparacao["campos"].items():
+        nome_campo = {"nome": "Nome", "cpf": "CPF", "data": "Datas"}[campo]
+        descricao = STATUS_COMPARACAO.get(resultado, resultado)
+        print(f"  {nome_campo}: {descricao}")
+
+    if compatibilidade is None:
+        print("  Compatibilidade: não calculada")
+    else:
+        print(f"  Compatibilidade: {compatibilidade:.2f}%")
+
+    print(f"  Resultado final: {status}")
+
+    if comparacao["status"] == "COMPATIVEL":
+        print("  Conclusão: os dados comparáveis são compatíveis.")
+    elif comparacao["status"] == "INCONSISTENTE":
+        print("  Conclusão: existem divergências que exigem revisão humana.")
+    else:
+        print("  Conclusão: não há dados suficientes para uma conclusão.")
+
+    print("=" * 64)
+
+
 def main():
     """
     Função principal do sistema.
     """
 
-    caminho_arquivo = input(
-        "Digite o caminho do documento: "
+    caminho_documento1 = input(
+        "Digite o caminho do documento 1: "
     ).strip()
 
-    if not caminho_arquivo:
-        print("Nenhum arquivo informado.")
+    caminho_documento2 = input(
+        "Digite o caminho do documento 2: "
+    ).strip()
+
+    if not caminho_documento1 or not caminho_documento2:
+        print("É necessário informar os dois documentos.")
         return
 
-    print("\nIniciando análise...")
+    print("\nAnalisando o documento 1...")
+    resultados1 = analisar_documento(caminho_documento1)
 
-    resultados = analisar_documento(caminho_arquivo)
+    print("Analisando o documento 2...")
+    resultados2 = analisar_documento(caminho_documento2)
 
-    exibir_resultados(resultados)
+    exibir_resultados(resultados1, "DOCUMENTO 1")
+    exibir_resultados(resultados2, "DOCUMENTO 2")
+
+    ocr1 = resultados1.get("ocr")
+    ocr2 = resultados2.get("ocr")
+
+    if isinstance(ocr1, dict) or isinstance(ocr2, dict) or not ocr1.success or not ocr2.success:
+        print("Não foi possível comparar: a análise de um dos documentos falhou.")
+        return
+
+    comparacao = DocumentComparator().compare(ocr1, ocr2)
+    exibir_comparacao(comparacao)
 
 
 if __name__ == "__main__":
