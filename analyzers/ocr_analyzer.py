@@ -4,6 +4,9 @@ import io
 import time
 import shutil
 import platform
+import unicodedata
+
+from datetime import date
 
 import fitz  # PyMuPDF
 import pytesseract
@@ -59,11 +62,27 @@ from analyzers.cpf_from_image import extract_cpf_from_region
 
 class OCRAnalyzer:
 
-    # Padrão usado para extrair a data do texto reconhecido pelo OCR.
+    # Padrões usados para localizar datas no texto reconhecido pelo OCR.
     # O CPF não usa mais regex simples aqui: a extração, validação de
     # dígito verificador e correção de erros de OCR ficam a cargo de
     # core.cpf_validator.find_cpf(), que é bem mais robusto.
-    DATE_PATTERN = re.compile(r"\d{2}/\d{2}/\d{4}")
+    DATE_NUMERIC_PATTERN = re.compile(
+        r"(?<!\d)(\d{1,2})\s*[/.-]\s*(\d{1,2})\s*[/.-]\s*(\d{4})(?!\d)"
+    )
+    DATE_FIELDS_PATTERN = re.compile(
+        r"(?i)dia\s*:?\s*(\d{1,2})\s*[/|,;\-]*\s*"
+        r"m[eê]s\s*:?\s*(\d{1,2})\s*[/|,;\-]*\s*"
+        r"ano\s*:?\s*(\d{4})"
+    )
+    DATE_WRITTEN_PATTERN = re.compile(
+        r"(?i)(?<!\d)(\d{1,2})\s+de\s+"
+        r"([a-záàâãéêíóôõúç]+)\s+de\s+(\d{4})(?!\d)"
+    )
+    _MESES = {
+        "janeiro": 1, "fevereiro": 2, "marco": 3, "abril": 4,
+        "maio": 5, "junho": 6, "julho": 7, "agosto": 8,
+        "setembro": 9, "outubro": 10, "novembro": 11, "dezembro": 12,
+    }
     # "Nome:" seguido do valor, aceitando tanto TUDO EM MAIÚSCULAS (comum em
     # certidões/documentos oficiais brasileiros, ex: "RICARDO CAVALCANTE")
     # quanto Title Case (comum em RGs de modelo mais novo, ex: "Ana Souza").
@@ -310,6 +329,48 @@ class OCRAnalyzer:
 
     # ---------- EXTRAÇÃO DE CAMPOS ----------
 
+    @staticmethod
+    def _normalizar_texto(texto):
+        return "".join(
+            caractere
+            for caractere in unicodedata.normalize("NFD", texto.lower())
+            if unicodedata.category(caractere) != "Mn"
+        )
+
+
+    @staticmethod
+    def _formatar_data_valida(dia, mes, ano):
+        try:
+            valor = date(int(ano), int(mes), int(dia))
+        except (TypeError, ValueError):
+            return None
+
+        return valor.strftime("%d/%m/%Y")
+
+
+    def _extract_dates(self, text):
+        """Extrai, valida e normaliza datas encontradas no texto do OCR."""
+        encontradas = []
+
+        def adicionar(dia, mes, ano):
+            data_formatada = self._formatar_data_valida(dia, mes, ano)
+            if data_formatada and data_formatada not in encontradas:
+                encontradas.append(data_formatada)
+
+        for match in self.DATE_NUMERIC_PATTERN.finditer(text):
+            adicionar(*match.groups())
+
+        for match in self.DATE_FIELDS_PATTERN.finditer(text):
+            adicionar(*match.groups())
+
+        for match in self.DATE_WRITTEN_PATTERN.finditer(text):
+            dia, nome_mes, ano = match.groups()
+            mes = self._MESES.get(self._normalizar_texto(nome_mes))
+            if mes:
+                adicionar(dia, mes, ano)
+
+        return encontradas
+
     def _extract_fields(self, text, image=None):
 
         cpf_result = find_cpf(text)
@@ -340,7 +401,7 @@ class OCRAnalyzer:
                 cpf_result = cpf_result_regiao
                 resolvido_via_regiao = True
 
-        date_matches = self.DATE_PATTERN.findall(text)
+        date_matches = self._extract_dates(text)
         name_match = self.NAME_PATTERN.search(text)
 
         if name_match:
