@@ -50,3 +50,28 @@ def test_exibe_comparacao_entre_documentos(capsys):
     assert "Datas: Não foi possível comparar" in saida
     assert "Compatibilidade: 44.44%" in saida
     assert "Resultado final: Inconsistente" in saida
+
+
+def test_exibe_metadados_especificos_de_pdf(capsys):
+    resultado = AnalysisResult(
+        success=True,
+        module="metadata",
+        data={
+            "type": "PDF",
+            "pages": 2,
+            "creator": "Canva",
+            "producer": "PDF Engine",
+            "creation_date": "D:20260909",
+            "modification_date": None,
+            "encrypted": False,
+        },
+    )
+
+    exibir_resultados({"metadata": resultado})
+    saida = capsys.readouterr().out
+
+    assert "Formato: PDF" in saida
+    assert "Páginas: 2" in saida
+    assert "Criador: Canva" in saida
+    assert "Criptografado: Não" in saida
+    assert "Metadados EXIF" not in saida
