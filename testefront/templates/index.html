@@ -270,7 +270,7 @@
                 <strong>Nome</strong>
 
                 <span>
-                    {{ resultado.comparacao.campos.nome }}
+                    {{ resultado.comparacao.campos.nome | replace("_", " ") | title }}
                 </span>
 
             </div>
@@ -281,7 +281,7 @@
                 <strong>CPF</strong>
 
                 <span>
-                    {{ resultado.comparacao.campos.cpf }}
+                    {{ resultado.comparacao.campos.cpf | replace("_", " ") | title }}
                 </span>
 
             </div>
@@ -292,7 +292,7 @@
                 <strong>Data</strong>
 
                 <span>
-                    {{ resultado.comparacao.campos.data }}
+                    {{ resultado.comparacao.campos.data | replace("_", " ") | title }}
                 </span>
 
             </div>
@@ -324,7 +324,7 @@
 
                     <strong>Resultado:</strong>
 
-                    {{ resultado.comparacao.status }}
+                    {{ resultado.comparacao.status | replace("_", " ") | title }}
 
                 </p>
 
