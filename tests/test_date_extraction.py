@@ -10,6 +10,8 @@ from analyzers.ocr_analyzer import OCRAnalyzer
         ("Emissão: 2-9-2026", ["02/09/2026"]),
         ("Validade: 09.09.2030", ["09/09/2030"]),
         ("Dia: 22 / Mês: 05 / Ano: 2024", ["22/05/2024"]),
+        ("Dia: 22 / Més: 05 / Ano: 2024", ["22/05/2024"]),
+        ("Dia: 22\nMes: 05\nAno: 2024", ["22/05/2024"]),
         ("Ribeirão Pires, 7 de setembro de 2026", ["07/09/2026"]),
         ("São Paulo, 15 de março de 2025", ["15/03/2025"]),
     ],
