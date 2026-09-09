@@ -56,15 +56,27 @@ def _exibir_ocr(resultado):
 
 def _exibir_metadata(resultado):
     dados = resultado.data
-    dimensoes = "Não disponíveis"
-    if dados.get("width") and dados.get("height"):
-        dimensoes = f"{dados['width']} x {dados['height']} px"
-
     print(f"  Status: {'Concluído' if resultado.success else 'Falhou'}")
-    print(f"  Formato: {_valor_ou_indisponivel(dados.get('format'))}")
-    print(f"  Dimensões: {dimensoes}")
-    print(f"  Modo de cor: {_valor_ou_indisponivel(dados.get('mode'))}")
-    print(f"  Metadados EXIF: {'Encontrados' if dados.get('exif') else 'Não encontrados'}")
+
+    if dados.get("type") == "PDF":
+        print(f"  Formato: PDF")
+        print(f"  Páginas: {dados.get('pages', 0)}")
+        print(f"  Criador: {_valor_ou_indisponivel(dados.get('creator'))}")
+        print(f"  Produtor: {_valor_ou_indisponivel(dados.get('producer'))}")
+        print(f"  Data de criação: {_valor_ou_indisponivel(dados.get('creation_date'))}")
+        print(f"  Data de modificação: {_valor_ou_indisponivel(dados.get('modification_date'))}")
+        print(f"  Criptografado: {'Sim' if dados.get('encrypted') else 'Não'}")
+    else:
+        dimensoes = "Não disponíveis"
+        if dados.get("width") and dados.get("height"):
+            dimensoes = f"{dados['width']} x {dados['height']} px"
+
+        print(f"  Formato: {_valor_ou_indisponivel(dados.get('format'))}")
+        print(f"  Dimensões: {dimensoes}")
+        print(f"  Modo de cor: {_valor_ou_indisponivel(dados.get('mode'))}")
+        print(f"  Metadados EXIF: {'Encontrados' if dados.get('exif') else 'Não encontrados'}")
+        if dados.get("software"):
+            print(f"  Software registrado: {dados['software']}")
     print(f"  Pontuação de alertas: {resultado.score} (quanto maior, mais atenção necessária)")
     print(f"  Tempo de análise: {resultado.execution_time:.2f}s")
     _exibir_alertas(resultado)
