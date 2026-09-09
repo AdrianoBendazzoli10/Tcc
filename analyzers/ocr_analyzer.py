@@ -71,7 +71,9 @@ class OCRAnalyzer:
     )
     DATE_FIELDS_PATTERN = re.compile(
         r"(?i)dia\s*:?\s*(\d{1,2})\s*[/|,;\-]*\s*"
-        r"m[eê]s\s*:?\s*(\d{1,2})\s*[/|,;\-]*\s*"
+        # O OCR pode trocar o acento circunflexo de "Mês" por agudo
+        # ("Més") ou remover o acento ("Mes"). Aceitamos as três formas.
+        r"m[eéê]s\s*:?\s*(\d{1,2})\s*[/|,;\-]*\s*"
         r"ano\s*:?\s*(\d{4})"
     )
     DATE_WRITTEN_PATTERN = re.compile(
